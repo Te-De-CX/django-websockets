@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Application</title>
+  </head>
+  <body>
+    <h1>Let's Chat</h1>
+    <form id="chatForm">
+      <input type="text" name="message" id="messageInput" />
+      <button type="submit">Send</button>
+    </form>
+    <div id="messages"></div>
+
+    <script>
+      let chatSocket;
+
+      function connectWebSocket() {
+        let url = `ws://${window.location.host}/ws/socket-server/`;
+        chatSocket = new WebSocket(url);
+
+        chatSocket.onopen = function (e) {
+          console.log("WebSocket connection established.");
+        };
+
+        chatSocket.onerror = function (e) {
+          console.error("WebSocket error:", e);
+        };
+
+        chatSocket.onclose = function (e) {
+          console.log("WebSocket connection closed. Reconnecting...");
+          setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+        };
+
+        chatSocket.onmessage = function (e) {
+          let data = JSON.parse(e.data);
+          console.log("Data:", data);
+
+          if (data.type === "chat") {
+            let messages = document.getElementById("messages");
+            messages.insertAdjacentHTML(
+              "beforeend",
+              `
+                        <div>
+                            <p>${data.message}</p>
+                        </div>
+                    `
+            );
+          }
+        };
+      }
+
+      // Initialize WebSocket connection
+      connectWebSocket();
+
+      // Handle form submission
+      let form = document.getElementById("chatForm");
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        let messageInput = document.getElementById("messageInput");
+        let message = messageInput.value;
+
+        if (chatSocket.readyState === WebSocket.OPEN) {
+          chatSocket.send(
+            JSON.stringify({
+              message: message,
+            })
+          );
+          messageInput.value = ""; // Clear the input field
+        } else {
+          console.error(
+            "WebSocket is not open. Current state:",
+            chatSocket.readyState
+          );
+        }
+      });
+    </script>
+  </body>
+</html>
